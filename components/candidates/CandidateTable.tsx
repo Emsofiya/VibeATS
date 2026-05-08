@@ -80,13 +80,13 @@ export default function CandidateTable({ candidates, jobId }: Props) {
   }
 
   // ── Summary stats ─────────────────────────────────────────────────────────────
-  const all            = candidates
-  const secondReview   = all.filter((c) => c.outcome === 'Second Review').length
-  const potentialFit   = all.filter((c) => c.outcome === 'Potential Fit').length
-  const active         = all.filter((c) => !isTerminalOutcome(c.outcome)).length
-  const dropped        = all.filter((c) => c.outcome === 'Dropped').length
-  const scored         = all.filter((c) => c.ai_score != null)
-  const avgScore       = scored.length > 0
+  const all          = candidates
+  const secondReview = all.filter((c) => c.outcome === 'Second Review').length
+  const potentialFit = all.filter((c) => c.outcome === 'Potential Fit').length
+  const active       = all.filter((c) => !isTerminalOutcome(c.outcome)).length
+  const dropped      = all.filter((c) => c.outcome === 'Dropped').length
+  const scored       = all.filter((c) => c.ai_score != null)
+  const avgScore     = scored.length > 0
     ? Math.round(scored.reduce((s, c) => s + (c.ai_score ?? 0), 0) / scored.length)
     : null
 
@@ -95,11 +95,11 @@ export default function CandidateTable({ candidates, jobId }: Props) {
       {/* Summary bar */}
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {[
-          { label: 'Total',         value: all.length,    cls: 'bg-gray-50' },
-          { label: 'Second Review', value: secondReview,  cls: 'bg-green-50' },
-          { label: 'Potential Fit', value: potentialFit,  cls: 'bg-yellow-50' },
-          { label: 'Active',        value: active,        cls: 'bg-brand-50' },
-          { label: 'Dropped',       value: dropped,       cls: 'bg-red-50' },
+          { label: 'Total',         value: all.length,      cls: 'bg-gray-50' },
+          { label: 'Second Review', value: secondReview,    cls: 'bg-green-50' },
+          { label: 'Potential Fit', value: potentialFit,    cls: 'bg-yellow-50' },
+          { label: 'Active',        value: active,          cls: 'bg-brand-50' },
+          { label: 'Dropped',       value: dropped,         cls: 'bg-red-50' },
           { label: 'Avg Score',     value: avgScore ?? '—', cls: 'bg-indigo-50' },
         ].map(({ label, value, cls }) => (
           <div
@@ -147,7 +147,7 @@ export default function CandidateTable({ candidates, jobId }: Props) {
       ) : (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[720px]">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="w-10 py-3 pl-4 pr-2">

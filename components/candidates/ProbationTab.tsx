@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { probationStatusColor, formatDate, formatDateTime, addDays, PROBATION_SCHEDULE } from '@/lib/utils'
+import { probationStatusColor, formatDate, formatDateTime } from '@/lib/utils'
 import { CalendarDays, CheckCircle2, Loader2, AlertCircle, Clock } from 'lucide-react'
 import type { ProbationCheckin } from '@/types'
 
@@ -19,7 +19,6 @@ export default function ProbationTab({ candidateId, startDate: initialStartDate 
   const [savingDate, setSavingDate]       = useState(false)
   const [checkins, setCheckins]           = useState<ProbationCheckin[]>([])
   const [loading, setLoading]             = useState(false)
-  const [completingId, setCompletingId]   = useState<string | null>(null)
   const [notesInputs, setNotesInputs]     = useState<Record<string, string>>({})
   const [openNotes, setOpenNotes]         = useState<Set<string>>(new Set())
   const [savingCheckin, setSavingCheckin] = useState<string | null>(null)

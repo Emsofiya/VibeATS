@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Check, X } from 'lucide-react'
 import { CANDIDATE_STAGES } from '@/types'
 import type { CandidateStage, CandidateOutcome } from '@/types'
@@ -22,11 +23,12 @@ const SHORT_LABELS: Record<CandidateStage, string> = {
 }
 
 export default function PipelineProgress({ stage, outcome }: Props) {
-  const currentIdx   = CANDIDATE_STAGES.indexOf(stage)
-  const isTerminal   = isTerminalOutcome(outcome)
-  const isHired      = outcome === 'Hired'
-  // Dropped/exit/etc — show red X on current stage
-  const isNegative   = isTerminal && !isHired
+  const currentIdx = CANDIDATE_STAGES.indexOf(stage)
+  const isTerminal = isTerminalOutcome(outcome)
+  const isHired    = outcome === 'Hired'
+  // Dropped / exit / etc — show red X on current stage
+  const isNegative = isTerminal && !isHired
+  const hiredIdx   = CANDIDATE_STAGES.indexOf('Hired')
 
   return (
     <div className="w-full overflow-x-auto pb-2">
@@ -36,40 +38,37 @@ export default function PipelineProgress({ stage, outcome }: Props) {
           const isCurrent   = idx === currentIdx
           const isFuture    = idx > currentIdx
 
-          // Hired outcome: all stages up to & including 'Hired' (index 6) go green
-          const hiredIdx   = CANDIDATE_STAGES.indexOf('Hired')
-          const greenFill  = isHired && idx <= hiredIdx
+          // Hired outcome: all stages up to & including 'Hired' go green
+          const greenFill = isHired && idx <= hiredIdx
 
           let circleClasses = ''
           let lineClasses   = ''
-          let content: React.ReactNode = null
+          let content: ReactNode = null
 
           if (greenFill) {
             circleClasses = 'bg-green-500 border-green-500 text-white'
-            content       = idx === hiredIdx
-              ? <Check className="h-3.5 w-3.5" />
-              : <Check className="h-3.5 w-3.5" />
+            content = <Check className="h-3.5 w-3.5" />
           } else if (isCurrent && isNegative) {
             circleClasses = 'bg-red-500 border-red-500 text-white'
-            content       = <X className="h-3.5 w-3.5" />
+            content = <X className="h-3.5 w-3.5" />
           } else if (isCurrent) {
             circleClasses = 'bg-brand-500 border-brand-500 text-white ring-4 ring-brand-100'
-            content       = <span className="text-xs font-bold">{idx + 1}</span>
+            content = <span className="text-xs font-bold">{idx + 1}</span>
           } else if (isCompleted) {
             circleClasses = 'bg-brand-500 border-brand-500 text-white'
-            content       = <Check className="h-3.5 w-3.5" />
+            content = <Check className="h-3.5 w-3.5" />
           } else {
             // future
             circleClasses = 'bg-white border-gray-300 text-gray-400'
-            content       = <span className="text-xs">{idx + 1}</span>
+            content = <span className="text-xs">{idx + 1}</span>
           }
 
           // Connector line after this step (not on last)
           if (idx < CANDIDATE_STAGES.length - 1) {
             if (isHired && idx < hiredIdx) {
               lineClasses = 'bg-green-400'
-            } else if (isCompleted || (isCurrent && !isNegative && !isHired)) {
-              lineClasses = idx < currentIdx ? 'bg-brand-500' : 'bg-gray-200'
+            } else if (isCompleted) {
+              lineClasses = 'bg-brand-500'
             } else {
               lineClasses = 'bg-gray-200'
             }

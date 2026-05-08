@@ -1,3 +1,41 @@
+// ─── Stage & Outcome ─────────────────────────────────────────────────────────
+
+export const CANDIDATE_STAGES = [
+  'CV Review',
+  'Interview',
+  'Technical Assessment',
+  'Culture Assessment',
+  'Background & Reference Check',
+  'Offer',
+  'Hired',
+  'Onboarding',
+] as const
+
+export type CandidateStage = typeof CANDIDATE_STAGES[number]
+
+export const CANDIDATE_OUTCOMES = [
+  'Pending',
+  'Second Review',
+  'Potential Fit',
+  'Progressed',
+  'Dropped',
+  'Voluntary Exit',
+  'Role Filled Internally',
+  'Role Closed',
+  'Downgraded',
+  'On Hold',
+  'Hired',
+] as const
+
+export type CandidateOutcome = typeof CANDIDATE_OUTCOMES[number]
+
+// Outcomes that mean the candidate is no longer active in the pipeline
+export const TERMINAL_OUTCOMES: CandidateOutcome[] = [
+  'Dropped', 'Voluntary Exit', 'Role Filled Internally', 'Role Closed', 'Hired',
+]
+
+export type JobStatus = 'Active' | 'Filled' | 'Closed' | 'On Hold'
+
 // ─── Database models ──────────────────────────────────────────────────────────
 
 export interface Profile {
@@ -16,7 +54,7 @@ export interface Job {
   client_name: string
   jd_file_url: string | null
   jd_text: string | null
-  status: 'Active' | 'Closed' | 'On Hold'
+  status: JobStatus
   ndpa_consent: boolean
   created_by: string
   created_at: string
@@ -34,9 +72,10 @@ export interface Candidate {
   cv_file_url: string | null
   cv_text: string | null
   ai_score: number | null
-  ai_status: CandidateStatus | null
   ai_report: AIReport | null
-  manual_status: CandidateStatus | 'Pending' | null
+  stage: CandidateStage
+  outcome: CandidateOutcome
+  start_date: string | null
   notes: string | null
   uploaded_by: string
   created_at: string
@@ -44,8 +83,6 @@ export interface Candidate {
   profiles?: Profile
   jobs?: Job
 }
-
-export type CandidateStatus = 'Second Review' | 'Potential Fit' | 'Rejected'
 
 export interface AIReport {
   candidate_name: string
@@ -69,6 +106,36 @@ export interface AIReport {
   overall_recommendation: string
   candidate_facing_rationale: string
   internal_notes: string
+  skills_tags: string[]          // auto-extracted key skills for talent pool
+}
+
+export interface ProbationCheckin {
+  id: string
+  candidate_id: string
+  day_number: number
+  label: string
+  due_date: string
+  status: 'Upcoming' | 'Due Today' | 'Overdue' | 'Completed'
+  notes: string | null
+  completed_at: string | null
+  completed_by: string | null
+  created_at: string
+  profiles?: Profile
+}
+
+export interface TalentPoolEntry {
+  id: string
+  candidate_id: string
+  original_job_id: string | null
+  ai_score: number | null
+  date_added: string
+  added_by: string
+  skills_tags: string[]
+  notes: string | null
+  pool_status: 'Available' | 'In Process' | 'Placed'
+  candidates?: Candidate
+  jobs?: Pick<Job, 'id' | 'title' | 'client_name'>
+  profiles?: Profile
 }
 
 export interface AuditLog {
@@ -107,9 +174,10 @@ export interface ScreenCVRequest {
 
 export interface ScreenCVResponse {
   report: AIReport
-  status: CandidateStatus
+  outcome: CandidateOutcome
+  stage: CandidateStage
 }
 
 // ─── UI helpers ──────────────────────────────────────────────────────────────
 
-export type StatusFilter = CandidateStatus | 'Pending' | 'All'
+export type StatusFilter = CandidateOutcome | 'All'

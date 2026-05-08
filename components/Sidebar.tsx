@@ -2,18 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Briefcase, ClipboardList, Settings, LogOut, User } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, Star, ClipboardList, Settings, LogOut, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
 const navItems = [
-  { href: '/jobs',    label: 'Jobs',       icon: Briefcase     },
-  { href: '/audit',   label: 'Audit Trail', icon: ClipboardList },
+  { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/jobs',         label: 'Jobs',         icon: Briefcase       },
+  { href: '/candidates',   label: 'Candidates',   icon: Users           },
+  { href: '/talent-pool',  label: 'Talent Pool',  icon: Star            },
+  { href: '/audit',        label: 'Audit Trail',  icon: ClipboardList   },
 ]
 
-interface SidebarProps {
-  profile: Profile
-}
+interface SidebarProps { profile: Profile }
 
 export default function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname()
@@ -28,7 +29,6 @@ export default function Sidebar({ profile }: SidebarProps) {
 
   return (
     <aside className="flex h-screen w-56 flex-col border-r border-gray-200 bg-white">
-      {/* Brand */}
       <div className="flex h-16 items-center gap-2.5 border-b border-gray-200 px-5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500">
           <span className="text-sm font-bold text-white">V</span>
@@ -36,7 +36,6 @@ export default function Sidebar({ profile }: SidebarProps) {
         <span className="text-base font-semibold text-gray-900">VibeATS</span>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-0.5 p-3">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
@@ -71,7 +70,6 @@ export default function Sidebar({ profile }: SidebarProps) {
         )}
       </nav>
 
-      {/* User profile + logout */}
       <div className="border-t border-gray-200 p-3 space-y-1">
         <div className="flex items-center gap-2.5 rounded-lg px-3 py-2">
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gray-100">

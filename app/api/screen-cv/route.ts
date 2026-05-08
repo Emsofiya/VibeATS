@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
-import { scoreToStatus } from '@/lib/utils'
+import { scoreToOutcome } from '@/lib/utils'
 import type { AIReport, ScreenCVRequest } from '@/types'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -35,7 +35,8 @@ Analyse the following CV against the Job Description. Return ONLY a JSON object 
   "red_flags": ["Array of specific concerns, or empty array if none"],
   "overall_recommendation": "One paragraph summarising suitability for this role",
   "candidate_facing_rationale": "Professional, neutral rationale suitable for an NDPA subject access request. No internal opinions, scoring, or speculative language.",
-  "internal_notes": "Frank, direct assessment for the recruiting team only. Be specific about gaps and risks."
+  "internal_notes": "Frank, direct assessment for the recruiting team only. Be specific about gaps and risks.",
+  "skills_tags": ["Array of 3–8 short skill/competency tags extracted from the CV, e.g. 'B2B Sales', 'P&L Management', 'Team Leadership'"]
 }
 
 Scoring rubric:
@@ -45,10 +46,10 @@ Scoring rubric:
 - achievements_impact (0–25): Measurable results, promotions, clear impact
 - values_mindset (0–10): Cultural signals, growth mindset, adaptability
 
-AUTO STATUS (do not include in JSON — applied by the system):
+AUTO OUTCOME (applied by system — do not include in JSON):
   total_score ≥ 75 → Second Review
-  total_score 70–74 → Potential Fit
-  total_score < 70 → Rejected
+  total_score 50–74 → Potential Fit
+  total_score < 50 → Dropped
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 JOB DESCRIPTION:
@@ -60,7 +61,6 @@ ${cv}
 `
 
 export async function POST(request: Request) {
-  // Verify the caller is authenticated
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -83,8 +83,6 @@ export async function POST(request: Request) {
     })
 
     const text = message.content[0].type === 'text' ? message.content[0].text : ''
-
-    // Strip any accidental markdown fences before parsing
     const cleaned = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
     const report: AIReport = JSON.parse(cleaned)
 
@@ -97,34 +95,36 @@ export async function POST(request: Request) {
       report.scores.values_mindset
     report.total_score = total
 
-    const status = scoreToStatus(total)
+    if (!Array.isArray(report.skills_tags)) report.skills_tags = []
 
-    // Persist the report back to the candidate row
+    const outcome = scoreToOutcome(total)
+    const stage   = 'CV Review'
+
     if (candidate_id) {
       await supabase
         .from('candidates')
         .update({
-          ai_report:     report,
-          ai_score:      total,
-          ai_status:     status,
-          manual_status: status,
-          name:          report.candidate_name || undefined,
-          email:         report.candidate_email || undefined,
-          updated_at:    new Date().toISOString(),
+          ai_report:  report,
+          ai_score:   total,
+          stage,
+          outcome,
+          name:       report.candidate_name || undefined,
+          email:      report.candidate_email || undefined,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', candidate_id)
     }
 
     await logAction({
-      action:       'cv_screened',
-      entity_type:  'candidate',
-      entity_id:    candidate_id,
+      action:      'cv_screened',
+      entity_type: 'candidate',
+      entity_id:   candidate_id,
       job_id,
       candidate_id,
-      metadata:     { score: total, status, candidate_name: report.candidate_name },
+      metadata:    { score: total, outcome, candidate_name: report.candidate_name },
     })
 
-    return NextResponse.json({ report, status })
+    return NextResponse.json({ report, outcome, stage })
   } catch (err) {
     console.error('Screen CV error:', err)
     return NextResponse.json(

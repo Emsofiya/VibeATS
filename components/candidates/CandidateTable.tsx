@@ -2,30 +2,40 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { statusColor, scoreColor, formatDate, exportCandidatesToCSV } from '@/lib/utils'
+import {
+  stageColor, outcomeColor, scoreColor,
+  isTerminalOutcome, formatDate, exportCandidatesToCSV,
+} from '@/lib/utils'
 import { Download, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
-import type { Candidate, StatusFilter } from '@/types'
+import type { Candidate } from '@/types'
 
 interface Props {
   candidates: Candidate[]
   jobId: string
 }
 
-type SortKey = 'name' | 'ai_score' | 'created_at'
-type SortDir = 'asc' | 'desc'
+type FilterTab = 'All' | 'Second Review' | 'Potential Fit' | 'Active' | 'Dropped' | 'Hired'
+type SortKey  = 'name' | 'ai_score' | 'created_at'
+type SortDir  = 'asc' | 'desc'
 
-const STATUS_OPTIONS: StatusFilter[] = ['All', 'Second Review', 'Potential Fit', 'Rejected', 'Pending']
+const FILTER_TABS: FilterTab[] = ['All', 'Second Review', 'Potential Fit', 'Active', 'Dropped', 'Hired']
 
 export default function CandidateTable({ candidates, jobId }: Props) {
-  const [filter, setFilter]     = useState<StatusFilter>('All')
+  const [filter, setFilter]     = useState<FilterTab>('All')
   const [sortKey, setSortKey]   = useState<SortKey>('created_at')
   const [sortDir, setSortDir]   = useState<SortDir>('desc')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const filtered = candidates.filter((c) => {
-    if (filter === 'All') return true
-    const status = c.manual_status ?? c.ai_status ?? 'Pending'
-    return status === filter
+    switch (filter) {
+      case 'All':           return true
+      case 'Active':        return !isTerminalOutcome(c.outcome)
+      case 'Second Review': return c.outcome === 'Second Review'
+      case 'Potential Fit': return c.outcome === 'Potential Fit'
+      case 'Dropped':       return c.outcome === 'Dropped'
+      case 'Hired':         return c.outcome === 'Hired'
+      default:              return true
+    }
   })
 
   const sorted = [...filtered].sort((a, b) => {
@@ -69,30 +79,33 @@ export default function CandidateTable({ candidates, jobId }: Props) {
     exportCandidatesToCSV(toExport, 'shortlist.csv')
   }
 
-  // Summary stats
-  const scored   = filtered.filter((c) => c.ai_score != null)
-  const avgScore = scored.length > 0
+  // ── Summary stats ─────────────────────────────────────────────────────────────
+  const all            = candidates
+  const secondReview   = all.filter((c) => c.outcome === 'Second Review').length
+  const potentialFit   = all.filter((c) => c.outcome === 'Potential Fit').length
+  const active         = all.filter((c) => !isTerminalOutcome(c.outcome)).length
+  const dropped        = all.filter((c) => c.outcome === 'Dropped').length
+  const scored         = all.filter((c) => c.ai_score != null)
+  const avgScore       = scored.length > 0
     ? Math.round(scored.reduce((s, c) => s + (c.ai_score ?? 0), 0) / scored.length)
     : null
-
-  const counts = { 'Second Review': 0, 'Potential Fit': 0, 'Rejected': 0, 'Pending': 0 }
-  filtered.forEach((c) => {
-    const s = (c.manual_status ?? c.ai_status ?? 'Pending') as keyof typeof counts
-    if (s in counts) counts[s]++
-  })
 
   return (
     <div className="space-y-4">
       {/* Summary bar */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {[
-          { label: 'Total', value: filtered.length,              cls: 'bg-gray-50' },
-          { label: 'Second Review', value: counts['Second Review'], cls: 'bg-green-50' },
-          { label: 'Potential Fit', value: counts['Potential Fit'], cls: 'bg-yellow-50' },
-          { label: 'Rejected',      value: counts['Rejected'],      cls: 'bg-red-50'  },
-          { label: 'Avg Score',     value: avgScore ?? '—',         cls: 'bg-brand-50' },
+          { label: 'Total',         value: all.length,    cls: 'bg-gray-50' },
+          { label: 'Second Review', value: secondReview,  cls: 'bg-green-50' },
+          { label: 'Potential Fit', value: potentialFit,  cls: 'bg-yellow-50' },
+          { label: 'Active',        value: active,        cls: 'bg-brand-50' },
+          { label: 'Dropped',       value: dropped,       cls: 'bg-red-50' },
+          { label: 'Avg Score',     value: avgScore ?? '—', cls: 'bg-indigo-50' },
         ].map(({ label, value, cls }) => (
-          <div key={label} className={`rounded-lg border border-gray-200 ${cls} px-4 py-3 text-center`}>
+          <div
+            key={label}
+            className={`rounded-lg border border-gray-200 ${cls} px-3 py-3 text-center`}
+          >
             <p className="text-xl font-bold text-gray-900">{value}</p>
             <p className="text-xs text-gray-500 mt-0.5">{label}</p>
           </div>
@@ -102,17 +115,17 @@ export default function CandidateTable({ candidates, jobId }: Props) {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div className="flex flex-wrap gap-1.5">
-          {STATUS_OPTIONS.map((s) => (
+          {FILTER_TABS.map((tab) => (
             <button
-              key={s}
-              onClick={() => setFilter(s)}
+              key={tab}
+              onClick={() => setFilter(tab)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                filter === s
+                filter === tab
                   ? 'bg-brand-500 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {s}
+              {tab}
             </button>
           ))}
         </div>
@@ -133,43 +146,49 @@ export default function CandidateTable({ candidates, jobId }: Props) {
         </p>
       ) : (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="w-10 py-3 pl-4 pr-2">
-                  <input
-                    type="checkbox"
-                    checked={selected.size === sorted.length && sorted.length > 0}
-                    onChange={toggleAll}
-                    className="h-3.5 w-3.5 rounded border-gray-300"
-                  />
-                </th>
-                <th
-                  className="px-3 py-3 text-left font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700"
-                  onClick={() => toggleSort('name')}
-                >
-                  <div className="flex items-center gap-1">Name <SortIcon col="name" /></div>
-                </th>
-                <th
-                  className="px-3 py-3 text-left font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700"
-                  onClick={() => toggleSort('ai_score')}
-                >
-                  <div className="flex items-center gap-1">Score <SortIcon col="ai_score" /></div>
-                </th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Status</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Uploaded by</th>
-                <th
-                  className="px-3 py-3 text-left font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700"
-                  onClick={() => toggleSort('created_at')}
-                >
-                  <div className="flex items-center gap-1">Date <SortIcon col="created_at" /></div>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {sorted.map((c) => {
-                const status = c.manual_status ?? c.ai_status ?? 'Pending'
-                return (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="w-10 py-3 pl-4 pr-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.size === sorted.length && sorted.length > 0}
+                      onChange={toggleAll}
+                      className="h-3.5 w-3.5 rounded border-gray-300"
+                    />
+                  </th>
+                  <th
+                    className="px-3 py-3 text-left font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700"
+                    onClick={() => toggleSort('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Name <SortIcon col="name" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-3 py-3 text-left font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700"
+                    onClick={() => toggleSort('ai_score')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Score <SortIcon col="ai_score" />
+                    </div>
+                  </th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-500">Stage</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-500">Outcome</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-500">Uploaded by</th>
+                  <th
+                    className="px-3 py-3 text-left font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700"
+                    onClick={() => toggleSort('created_at')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Date <SortIcon col="created_at" />
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {sorted.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3 pl-4 pr-2">
                       <input
@@ -181,7 +200,10 @@ export default function CandidateTable({ candidates, jobId }: Props) {
                       />
                     </td>
                     <td className="px-3 py-3">
-                      <Link href={`/jobs/${jobId}/candidates/${c.id}`} className="font-medium text-gray-900 hover:text-brand-600">
+                      <Link
+                        href={`/jobs/${jobId}/candidates/${c.id}`}
+                        className="font-medium text-gray-900 hover:text-brand-600"
+                      >
                         {c.name}
                       </Link>
                       {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
@@ -192,17 +214,22 @@ export default function CandidateTable({ candidates, jobId }: Props) {
                       </span>
                     </td>
                     <td className="px-3 py-3">
-                      <span className={`badge ${statusColor(status as never)}`}>{status}</span>
+                      <span className={`badge ${stageColor(c.stage)}`}>{c.stage}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`badge ${outcomeColor(c.outcome)}`}>{c.outcome}</span>
                     </td>
                     <td className="px-3 py-3 text-gray-500 text-xs">
                       {c.profiles?.email ?? '—'}
                     </td>
-                    <td className="px-3 py-3 text-gray-400 text-xs">{formatDate(c.created_at)}</td>
+                    <td className="px-3 py-3 text-gray-400 text-xs">
+                      {formatDate(c.created_at)}
+                    </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

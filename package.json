@@ -16,6 +16,7 @@
     "lucide-react": "^0.460.0",
     "mammoth": "^1.9.0",
     "next": "14.2.29",
+    "recharts": "^2.15.0",
     "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

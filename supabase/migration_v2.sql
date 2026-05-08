@@ -69,13 +69,13 @@ CREATE TABLE IF NOT EXISTS probation_checkins (
 
 ALTER TABLE probation_checkins ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Active users can read probation checkins"
+CREATE POLICY "Active users can read probation checkins"
   ON probation_checkins FOR SELECT USING (is_active_user());
 
-CREATE POLICY IF NOT EXISTS "Active users can insert probation checkins"
+CREATE POLICY "Active users can insert probation checkins"
   ON probation_checkins FOR INSERT WITH CHECK (is_active_user());
 
-CREATE POLICY IF NOT EXISTS "Active users can update probation checkins"
+CREATE POLICY "Active users can update probation checkins"
   ON probation_checkins FOR UPDATE USING (is_active_user());
 
 -- ─────────────────────────────────────────────────────────────
@@ -98,16 +98,16 @@ CREATE TABLE IF NOT EXISTS talent_pool (
 
 ALTER TABLE talent_pool ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Active users can read talent pool"
+CREATE POLICY "Active users can read talent pool"
   ON talent_pool FOR SELECT USING (is_active_user());
 
-CREATE POLICY IF NOT EXISTS "Active users can insert talent pool"
+CREATE POLICY "Active users can insert talent pool"
   ON talent_pool FOR INSERT WITH CHECK (is_active_user());
 
-CREATE POLICY IF NOT EXISTS "Active users can update talent pool"
+CREATE POLICY "Active users can update talent pool"
   ON talent_pool FOR UPDATE USING (is_active_user());
 
-CREATE POLICY IF NOT EXISTS "Super admin can delete from talent pool"
+CREATE POLICY "Super admin can delete from talent pool"
   ON talent_pool FOR DELETE USING (is_super_admin());
 
 -- ─────────────────────────────────────────────────────────────
